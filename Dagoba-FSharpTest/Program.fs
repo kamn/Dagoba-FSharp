@@ -73,3 +73,51 @@ let ``Find Vertex by ids``() =
     let vertices = findVertexByIds [1; 2] vertexGraph
     Assert.AreEqual("A", vertices.[0].name)
     Assert.AreEqual("B", vertices.[1].name)
+
+[<Test>]
+let ``Graph to Query``() = 
+    let graph = emptyGraph |> addVertices [{name = "A"}; {name = "B"}; {name = "C"}]
+    let graphQuery = graph |> v 1
+    Assert.AreEqual(graph, graphQuery.graph)
+    //Assert.AreEqual(graph, graphQuery.program)
+
+[<Test>]
+let ``Is empty Query done``() = 
+    let graph = emptyGraph |> addVertices [{name = "A"}; {name = "B"}; {name = "C"}]
+    let emptyQuery =  {
+        graph = graph;
+        program = []; // TODO: Add vertex
+    }
+    Assert.AreEqual(true, (isQueryDone emptyQuery))
+
+[<Test>]
+let ``Is single program Query done``() = 
+    let graph = emptyGraph |> addVertices [{name = "A"}; {name = "B"}; {name = "C"}]
+    let query =  {
+        graph = graph;
+        program = [{
+            fn = vertex;
+            args = 0;
+            state = {
+                    vertices = [];
+                    response =  Done; 
+                    }
+        }]; // TODO: Add vertex
+    }
+    Assert.AreEqual(true, (isQueryDone query))
+
+[<Test>]
+let ``Is single program Query not done``() = 
+    let graph = emptyGraph |> addVertices [{name = "A"}; {name = "B"}; {name = "C"}]
+    let query =  {
+        graph = graph;
+        program = [{
+            fn = vertex;
+            args = 0;
+            state = {
+                    vertices = [];
+                    response =  Pull; 
+                    }
+        }]; // TODO: Add vertex
+    }
+    Assert.AreEqual(false, (isQueryDone query))

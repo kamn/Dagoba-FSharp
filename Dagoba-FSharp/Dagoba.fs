@@ -49,16 +49,43 @@ type QueryState = {
 
 
 type QueryStep = {
-    fn: (Graph -> obj -> Gremlin -> QueryState -> QueryState);
+    fn: (Graph -> obj -> QueryStateResponse -> QueryState -> QueryState);
     state: QueryState;
     args: obj;
 }
 
 type Query = {
     graph: Graph;
-    state: QueryState;
-    program: QueryStep list
+    program: QueryStep list;
 }
+
+
+type QueryRunHelper = {
+    query: Query;
+    idx: int;
+    lastResult: QueryStateResponse;
+    results: Vertex list;
+}
+
+//http://stackoverflow.com/a/2890789
+let rec insert v i l =
+    match i, l with
+    | 0, xs -> v::xs
+    | i, x::xs -> x::insert v (i - 1) xs
+    | i, [] -> failwith "index out of range"
+
+let rec remove i l =
+    match i, l with
+    | 0, x::xs -> xs
+    | i, x::xs -> x::remove (i - 1) xs
+    | i, [] -> failwith "index out of range"
+
+let rec replace v i l =
+    match i, l with
+    | 0, x::xs -> v::xs
+    | i, x::xs -> x::insert v (i - 1) xs
+    | i, [] -> failwith "index out of range"
+
 
 let emptyGraph = { edges = []; vertices = []; autoId = 1; vertexMap = Map.empty; inMap = Map.empty; outMap = Map.empty}
 
@@ -107,12 +134,6 @@ let findVertexByIds (ids: int list) (graph: Graph) =
 // Query functions
 // ---
 
-let run (q: Query) =
-    q
-
-let progressQuery (q: Query) =
-    q
-
 let add (fn) (args:obj) (q: Query)=
     let step = {
     // (fun graph args state gremlin -> {vertex = {name = "A"}; state =  {id = 1};}
@@ -138,3 +159,47 @@ let vertex graph (args: obj) gremlin (state: QueryState) =
             {state with response = Done}
         else 
             state
+let v (args:obj) (graph: Graph) =
+    let q = {
+        graph = graph;
+        program = []; // TODO: Add vertex
+    }
+    q
+    |> add vertex args
+
+let isQueryDone (q: Query) =
+    q.program
+    |> List.map (fun p -> p.state.response)
+    |> List.map (fun r ->
+        match r with
+        | Done -> true
+        | _ -> false)
+    |> List.fold (fun a r -> a && r) true 
+
+//TODO: Check if this is call tail optimized
+let rec runQuery (q: QueryRunHelper) =
+    if isQueryDone q.query then
+        q.results
+    else
+        let graph = q.query.graph
+        let step = List.item q.idx q.query.program
+        let stepState' = step.fn graph step.args q.lastResult step.state
+        let step' = {step with state = stepState'}
+        let lastResult' = stepState'.response;
+        //TODO: You don;t always decreament
+        let idx' = q.idx - 1;
+        let program' = replace step' q.idx q.query.program
+        let query' = {q.query with program = program'}
+        runQuery q
+        
+
+let run (q: Query) =
+    let queryRunHelper = {
+        query = q;
+        idx = (q.program.Length - 1);
+        lastResult = Started;
+        results = [];
+    }
+
+    let results = runQuery queryRunHelper
+    results
