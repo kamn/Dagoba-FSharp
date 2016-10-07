@@ -26,11 +26,6 @@ type Graph = {
     inMap: Map<int, int list>;
 }
 
-type QueryState = {
-    id: int;
-    vertices: InternalVertex list;
-}
-
 type GremlinState = {
     id: int;
 }
@@ -41,8 +36,21 @@ type Gremlin = {
     state: GremlinState;
 }
 
+type QueryStateResponse =
+    | Gremlin of Gremlin
+    | Done
+    | Pull
+    | Started
+
+type QueryState = {
+    vertices: InternalVertex list;
+    response: QueryStateResponse 
+}
+
+
 type QueryStep = {
-    fn: (Graph -> obj -> Gremlin -> QueryState -> Gremlin);
+    fn: (Graph -> obj -> Gremlin -> QueryState -> QueryState);
+    state: QueryState;
     args: obj;
 }
 
@@ -99,16 +107,34 @@ let findVertexByIds (ids: int list) (graph: Graph) =
 // Query functions
 // ---
 
+let run (q: Query) =
+    q
+
+let progressQuery (q: Query) =
+    q
 
 let add (fn) (args:obj) (q: Query)=
     let step = {
     // (fun graph args state gremlin -> {vertex = {name = "A"}; state =  {id = 1};}
         fn = fn;
         args = args;
+        state = {
+                vertices = [];
+                response =  Pull; 
+                }
     }
     {q with program = step :: q.program}
 
-let vertex graph args state gremlin =
-    //if (List.length state.vertices) = 0 then
-        
-    {vertex = {name = "A"}; state =  {id = 1};}
+let vertex graph (args: obj) gremlin (state: QueryState) =
+    match state.response with
+    | Started ->
+        let data = findVertexById (args :?> int)
+        if (List.length state.vertices) = 0 then
+            {state with response = Done}
+        else 
+            state
+    | _ -> 
+        if (List.length state.vertices) = 0 then
+            {state with response = Done}
+        else 
+            state
