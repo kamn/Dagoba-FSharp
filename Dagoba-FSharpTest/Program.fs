@@ -121,3 +121,38 @@ let ``Is single program Query not done``() =
         }]; // TODO: Add vertex
     }
     Assert.AreEqual(false, (isQueryDone query))
+
+
+[<Test>]
+let ``Vertex pipeline one step``() = 
+    let graph = emptyGraph |> addVertices [{name = "A"};]
+    let query =  v 1 graph
+    let queryState = {
+        vertices = [];
+        response =  Started; 
+    }
+    let queryState' = vertex graph 1 Started queryState
+    let maybeGremlin = queryState'.response
+    let expectedGremlin = {
+        vertex = {
+            id = 1;
+            name = "A"; 
+        };
+        state = {
+            id=0
+        };
+    }
+    Assert.AreEqual(Gremlin expectedGremlin, maybeGremlin)
+
+[<Test>]
+let ``Vertex pipeline two step``() = 
+    let graph = emptyGraph |> addVertices [{name = "A"};]
+    let query =  v 1 graph
+    let queryState = {
+        vertices = [];
+        response =  Started; 
+    }
+    let queryState' = vertex graph 1 Started queryState
+    let queryState'' = vertex graph 1 queryState'.response queryState'
+    let maybeGremlin = queryState''.response
+    Assert.AreEqual(Done, maybeGremlin)

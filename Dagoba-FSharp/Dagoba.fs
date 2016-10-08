@@ -2,12 +2,12 @@
 
 //https://github.com/aosabook/500lines/blob/master/dagoba/code/dagoba.js
 
-type Vertex = {
+type InternalVertex = {
+    id: int;
     name: string;
 }
 
-type InternalVertex = {
-    id: int;
+type Vertex = {
     name: string;
 }
 
@@ -32,7 +32,7 @@ type GremlinState = {
 
 
 type Gremlin = {
-    vertex: Vertex;
+    vertex: InternalVertex;
     state: GremlinState;
 }
 
@@ -66,6 +66,7 @@ type QueryRunHelper = {
     lastResult: QueryStateResponse;
     results: Vertex list;
 }
+
 
 //http://stackoverflow.com/a/2890789
 let rec insert v i l =
@@ -149,23 +150,37 @@ let add (fn) (args:obj) (q: Query)=
 let vertex graph (args: obj) gremlin (state: QueryState) =
     match state.response with
     | Started ->
-        let data = findVertexById (args :?> int)
-        if (List.length state.vertices) = 0 then
+        let data = findVertexById (args :?> int) graph
+        let list = [data]
+        if (List.length list) = 0 then
+            {state with response = Done}
+        else
+            match list with
+            | vertex::xs ->
+                let vertices' = xs
+                let gremlin = {vertex = vertex; state = {id=0}}
+                {state with vertices = vertices'; response = Gremlin gremlin}
+            | _ ->
+                state //TODO: Pop vertex off
+    | _ ->
+        let list = state.vertices
+        if (List.length list) = 0 then
             {state with response = Done}
         else 
-            state
-    | _ -> 
-        if (List.length state.vertices) = 0 then
-            {state with response = Done}
-        else 
-            state
+            match list with
+            | vertex::xs ->
+                let vertices' = xs
+                let gremlin = {vertex = vertex; state = {id=0}}
+                {state with vertices = vertices'; response = Gremlin gremlin}
+            | _ ->
+                state //TODO: Pop vertex off
+
 let v (args:obj) (graph: Graph) =
     let q = {
         graph = graph;
         program = []; // TODO: Add vertex
     }
-    q
-    |> add vertex args
+    q |> add vertex args
 
 let isQueryDone (q: Query) =
     q.program
@@ -187,7 +202,7 @@ let rec runQuery (q: QueryRunHelper) =
         let step' = {step with state = stepState'}
         let lastResult' = stepState'.response;
         //TODO: You don;t always decreament
-        let idx' = q.idx - 1;
+        let idx' = q.idx + 1;
         let program' = replace step' q.idx q.query.program
         let query' = {q.query with program = program'}
         runQuery q
@@ -196,7 +211,7 @@ let rec runQuery (q: QueryRunHelper) =
 let run (q: Query) =
     let queryRunHelper = {
         query = q;
-        idx = (q.program.Length - 1);
+        idx = 0;
         lastResult = Started;
         results = [];
     }
