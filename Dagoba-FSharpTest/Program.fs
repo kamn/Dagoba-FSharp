@@ -57,20 +57,26 @@ let ``Add edge list``() =
     Assert.AreEqual(1, List.length (Map.find 2 vertexGraph.outMap))
     Assert.AreEqual(1, List.length (Map.find 1 vertexGraph.outMap))
 
-(*
-let ``Add edge list``() = 
+
+let ``Find out edge list``() = 
     let vertexGraph = 
         emptyGraph
         |> addVertices [{name = "A"}; {name = "B"}; {name = "C"}]
-        |> addEdges [{label = "parent"; _in = 2; _out = 1; }; {label = "parent"; _in = 3; _out = 2; }]
+        |> addEdges [{label = "parent"; inId = 2; outId = 1; }; {label = "parent"; inId = 3; outId = 2; }]
     Assert.AreEqual(4, vertexGraph.autoId)
-    Assert.AreEqual(3, List.length vertexGraph.vertices)
-    Assert.AreEqual(2, List.length vertexGraph.edges)
-    Assert.AreEqual(1, List.length (Map.find 2 vertexGraph.inMap))
-    Assert.AreEqual(0, List.length (Map.find 1 vertexGraph.inMap))
-    Assert.AreEqual(1, List.length (Map.find 2 vertexGraph.outMap))
-    Assert.AreEqual(1, List.length (Map.find 1 vertexGraph.outMap))
-    *)
+    let outEdges = findInEdges (findVertexById 1 vertexGraph) vertexGraph
+    Assert.AreEqual(1, List.length outEdges)
+    Assert.AreEqual({label = "parent"; inId = 2; outId = 1; }, outEdges.[0])
+
+let ``Find in edge list``() = 
+    let vertexGraph = 
+        emptyGraph
+        |> addVertices [{name = "A"}; {name = "B"}; {name = "C"}]
+        |> addEdges [{label = "parent"; inId = 2; outId = 1; }; {label = "parent"; inId = 3; outId = 2; }]
+    Assert.AreEqual(4, vertexGraph.autoId)
+    let inEdges = findInEdges (findVertexById 2 vertexGraph) vertexGraph
+    Assert.AreEqual(1, List.length inEdges)
+    Assert.AreEqual({label = "parent"; inId = 2; outId = 1; }, inEdges.[0])
 
 [<Test>]
 let ``Find Vertex by id``() = 

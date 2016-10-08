@@ -123,7 +123,7 @@ let findOutEdges (vertex: InternalVertex) (graph: Graph) =
     Map.find vertex.id graph.outMap
 
 let findInEdges (vertex: InternalVertex) (graph: Graph) =
-    Map.find vertex.id graph.outMap
+    Map.find vertex.id graph.inMap
 // ---
 // Query functions
 // ---
