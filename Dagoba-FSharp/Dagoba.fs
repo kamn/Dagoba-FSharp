@@ -64,7 +64,7 @@ type QueryRunHelper = {
     query: Query;
     idx: int;
     lastResult: QueryStateResponse;
-    results: Vertex list;
+    results: QueryStateResponse list;
 }
 
 
@@ -142,7 +142,7 @@ let add (fn) (args:obj) (q: Query)=
         args = args;
         state = {
                 vertices = [];
-                response =  Pull; 
+                response = Started; 
                 }
     }
     {q with program = step :: q.program}
@@ -201,11 +201,13 @@ let rec runQuery (q: QueryRunHelper) =
         let stepState' = step.fn graph step.args q.lastResult step.state
         let step' = {step with state = stepState'}
         let lastResult' = stepState'.response;
-        //TODO: You don;t always decreament
         let idx' = q.idx + 1;
         let program' = replace step' q.idx q.query.program
         let query' = {q.query with program = program'}
-        runQuery q
+        if idx' >= program'.Length then
+            runQuery {q with query = query'; results = lastResult' :: q.results}
+        else
+            runQuery {q with query = query'; idx = idx'}
         
 
 let run (q: Query) =
@@ -218,3 +220,10 @@ let run (q: Query) =
 
     let results = runQuery queryRunHelper
     results
+    |> List.filter (fun i ->
+        match i with
+           | Gremlin g -> true
+           | _ -> false)
+    |> List.map (fun i -> 
+        match i with
+        | Gremlin g -> g.vertex)

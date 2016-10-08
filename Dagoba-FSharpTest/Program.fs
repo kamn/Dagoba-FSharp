@@ -156,3 +156,13 @@ let ``Vertex pipeline two step``() =
     let queryState'' = vertex graph 1 queryState'.response queryState'
     let maybeGremlin = queryState''.response
     Assert.AreEqual(Done, maybeGremlin)
+
+
+[<Test>]
+let ``Basic run program``() = 
+    let results =
+         emptyGraph 
+         |> addVertices [{name = "A"};]
+         |> v 1
+         |> run
+    Assert.AreEqual("A", results.[0].name)
