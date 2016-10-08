@@ -34,7 +34,7 @@ let ``Add edge``() =
         emptyGraph
         |> addVertex {name = "A"}
         |> addVertex {name = "B"}
-        |> addEdge {label = "parent"; _in = 2; _out = 1; }
+        |> addEdge {label = "parent"; inId = 2; outId = 1; }
     Assert.AreEqual(3, vertexGraph.autoId)
     Assert.AreEqual(2, List.length vertexGraph.vertices)
     Assert.AreEqual(1, List.length vertexGraph.edges)
@@ -48,6 +48,20 @@ let ``Add edge list``() =
     let vertexGraph = 
         emptyGraph
         |> addVertices [{name = "A"}; {name = "B"}; {name = "C"}]
+        |> addEdges [{label = "parent"; inId = 2; outId = 1; }; {label = "parent"; inId = 3; outId = 2; }]
+    Assert.AreEqual(4, vertexGraph.autoId)
+    Assert.AreEqual(3, List.length vertexGraph.vertices)
+    Assert.AreEqual(2, List.length vertexGraph.edges)
+    Assert.AreEqual(1, List.length (Map.find 2 vertexGraph.inMap))
+    Assert.AreEqual(0, List.length (Map.find 1 vertexGraph.inMap))
+    Assert.AreEqual(1, List.length (Map.find 2 vertexGraph.outMap))
+    Assert.AreEqual(1, List.length (Map.find 1 vertexGraph.outMap))
+
+(*
+let ``Add edge list``() = 
+    let vertexGraph = 
+        emptyGraph
+        |> addVertices [{name = "A"}; {name = "B"}; {name = "C"}]
         |> addEdges [{label = "parent"; _in = 2; _out = 1; }; {label = "parent"; _in = 3; _out = 2; }]
     Assert.AreEqual(4, vertexGraph.autoId)
     Assert.AreEqual(3, List.length vertexGraph.vertices)
@@ -56,6 +70,7 @@ let ``Add edge list``() =
     Assert.AreEqual(0, List.length (Map.find 1 vertexGraph.inMap))
     Assert.AreEqual(1, List.length (Map.find 2 vertexGraph.outMap))
     Assert.AreEqual(1, List.length (Map.find 1 vertexGraph.outMap))
+    *)
 
 [<Test>]
 let ``Find Vertex by id``() = 
@@ -79,7 +94,6 @@ let ``Graph to Query``() =
     let graph = emptyGraph |> addVertices [{name = "A"}; {name = "B"}; {name = "C"}]
     let graphQuery = graph |> v 1
     Assert.AreEqual(graph, graphQuery.graph)
-    //Assert.AreEqual(graph, graphQuery.program)
 
 [<Test>]
 let ``Is empty Query done``() = 

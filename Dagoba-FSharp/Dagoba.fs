@@ -13,8 +13,8 @@ type Vertex = {
 
 type Edge = {
     label: string;
-    _in: int;
-    _out: int;
+    inId: int;
+    outId: int;
 }
 
 type Graph = {
@@ -22,8 +22,8 @@ type Graph = {
     vertices: InternalVertex list;
     autoId: int;
     vertexMap: Map<int, InternalVertex>;
-    outMap: Map<int, int list>;
-    inMap: Map<int, int list>;
+    outMap: Map<int, Edge list>;
+    inMap: Map<int, Edge list>;
 }
 
 type GremlinState = {
@@ -69,22 +69,10 @@ type QueryRunHelper = {
 
 
 //http://stackoverflow.com/a/2890789
-let rec insert v i l =
-    match i, l with
-    | 0, xs -> v::xs
-    | i, x::xs -> x::insert v (i - 1) xs
-    | i, [] -> failwith "index out of range"
-
-let rec remove i l =
-    match i, l with
-    | 0, x::xs -> xs
-    | i, x::xs -> x::remove (i - 1) xs
-    | i, [] -> failwith "index out of range"
-
 let rec replace v i l =
     match i, l with
     | 0, x::xs -> v::xs
-    | i, x::xs -> x::insert v (i - 1) xs
+    | i, x::xs -> x::replace v (i - 1) xs
     | i, [] -> failwith "index out of range"
 
 
@@ -103,13 +91,13 @@ let addVertex (vertex: Vertex) (graph: Graph) =
 let addEdge (edge: Edge) (graph: Graph) =
     //TODO: If not there a error is thrown
     //Or do tryFind
-    let _in = Map.find edge._in graph.vertexMap
-    let _out = Map.find edge._out graph.vertexMap
+    let _in = Map.find edge.inId graph.vertexMap
+    let _out = Map.find edge.outId graph.vertexMap
 
-    let listOfIn = Map.find edge._in graph.inMap
-    let updatedInMap = Map.add edge._in (edge._out :: listOfIn) graph.inMap
-    let listOfOut = Map.find edge._out graph.outMap
-    let updatedOutMap = Map.add edge._out (edge._in :: listOfOut) graph.outMap
+    let listOfIn = Map.find edge.inId graph.inMap
+    let updatedInMap = Map.add edge.inId (edge :: listOfIn) graph.inMap
+    let listOfOut = Map.find edge.outId graph.outMap
+    let updatedOutMap = Map.add edge.outId (edge :: listOfOut) graph.outMap
 
     {graph with 
         edges = edge :: graph.edges;
@@ -131,6 +119,11 @@ let findVertexById (id: int) (graph: Graph) =
 let findVertexByIds (ids: int list) (graph: Graph) =
     List.map (fun value -> Map.find value graph.vertexMap) ids
 
+let findOutEdges (vertex: InternalVertex) (graph: Graph) =
+    Map.find vertex.id graph.outMap
+
+let findInEdges (vertex: InternalVertex) (graph: Graph) =
+    Map.find vertex.id graph.outMap
 // ---
 // Query functions
 // ---
@@ -160,8 +153,7 @@ let vertex graph (args: obj) gremlin (state: QueryState) =
                 let vertices' = xs
                 let gremlin = {vertex = vertex; state = {id=0}}
                 {state with vertices = vertices'; response = Gremlin gremlin}
-            | _ ->
-                state //TODO: Pop vertex off
+            | _ -> state
     | _ ->
         let list = state.vertices
         if (List.length list) = 0 then
@@ -172,8 +164,10 @@ let vertex graph (args: obj) gremlin (state: QueryState) =
                 let vertices' = xs
                 let gremlin = {vertex = vertex; state = {id=0}}
                 {state with vertices = vertices'; response = Gremlin gremlin}
-            | _ ->
-                state //TODO: Pop vertex off
+            | _ -> state
+
+let outPipeline graph (args: obj) gremlin (state: QueryState) =
+    state
 
 let v (args:obj) (graph: Graph) =
     let q = {
