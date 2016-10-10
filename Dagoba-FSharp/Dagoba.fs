@@ -44,6 +44,7 @@ type QueryStateResponse =
 
 type QueryState = {
     vertices: InternalVertex list;
+    edges: Edge list;
     response: QueryStateResponse 
 }
 
@@ -135,6 +136,7 @@ let add (fn) (args:obj) (q: Query)=
         args = args;
         state = {
                 vertices = [];
+                edges = [];
                 response = Started; 
                 }
     }
@@ -166,8 +168,30 @@ let vertex graph (args: obj) gremlin (state: QueryState) =
                 {state with vertices = vertices'; response = Gremlin gremlin}
             | _ -> state
 
-let outPipeline graph (args: obj) gremlin (state: QueryState) =
-    state
+let rec outPipeline graph (args: obj) (gremlin: QueryStateResponse) (state: QueryState) =
+    if state.response = Started then
+        {state with response = Pull}
+    else
+        //TODO Check that the initial query was made
+        if state.edges.Length = 0 then
+            match gremlin with
+            | Gremlin g ->
+                let edges = findOutEdges g.vertex graph
+                if edges.Length = 0 then
+                    {state with response = Pull}
+                else
+                    outPipeline graph args gremlin {state with edges = edges;}
+            | _ -> {state with response = Pull}
+        else
+            match state.edges with
+            | x::xs ->
+                let vertexId = x.outId
+                let vertex = findVertexById vertexId graph
+                match gremlin with
+                | Gremlin g ->
+                    {state with edges = xs; response = Gremlin {g with vertex = vertex}}
+                | _ -> {state with response = Pull}
+            | _ ->  {state with response = Pull}
 
 let v (args:obj) (graph: Graph) =
     let q = {
