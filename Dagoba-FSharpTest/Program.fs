@@ -190,3 +190,15 @@ let ``Basic run program``() =
          |> v 1
          |> run
     Assert.AreEqual("A", results.[0].name)
+
+[<Test>]
+let ``Basic run with out program``() = 
+    let results =
+         emptyGraph 
+         |> addVertices [{name = "A"};]
+         |> v 1
+    let outResult =
+        results
+        |> out 1
+        |> run
+    Assert.AreEqual("A", outResult.[0].name)

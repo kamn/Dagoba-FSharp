@@ -168,7 +168,7 @@ let vertex graph (args: obj) gremlin (state: QueryState) =
                 {state with vertices = vertices'; response = Gremlin gremlin}
             | _ -> state
 
-let rec outPipeline graph (args: obj) (gremlin: QueryStateResponse) (state: QueryState) =
+let rec outEdgePipeline graph (args: obj) (gremlin: QueryStateResponse) (state: QueryState) =
     if state.response = Started then
         {state with response = Pull}
     else
@@ -178,9 +178,9 @@ let rec outPipeline graph (args: obj) (gremlin: QueryStateResponse) (state: Quer
             | Gremlin g ->
                 let edges = findOutEdges g.vertex graph
                 if edges.Length = 0 then
-                    {state with response = Pull}
+                    {state with response = Pull} // 
                 else
-                    outPipeline graph args gremlin {state with edges = edges;}
+                    outEdgePipeline graph args gremlin {state with edges = edges;}
             | _ -> {state with response = Pull}
         else
             match state.edges with
@@ -200,6 +200,9 @@ let v (args:obj) (graph: Graph) =
     }
     q |> add vertex args
 
+let out (args:obj) (q: Query) =
+    q |> add outEdgePipeline args
+
 let isQueryDone (q: Query) =
     q.program
     |> List.map (fun p -> p.state.response)
@@ -218,14 +221,19 @@ let rec runQuery (q: QueryRunHelper) =
         let step = List.item q.idx q.query.program
         let stepState' = step.fn graph step.args q.lastResult step.state
         let step' = {step with state = stepState'}
+        //TODO: If there is a reponse(Not pull) move the idx forward?
         let lastResult' = stepState'.response;
-        let idx' = q.idx + 1;
+        let idx' = q.idx - 1;
         let program' = replace step' q.idx q.query.program
         let query' = {q.query with program = program'}
-        if idx' >= program'.Length then
-            runQuery {q with query = query'; results = lastResult' :: q.results}
-        else
-            runQuery {q with query = query'; idx = idx'}
+        match lastResult' with
+        | Pull ->
+            runQuery {q with query = query';  idx = q.idx + 1;}
+        | _ ->
+            if q.idx <= 0 then
+                runQuery {q with query = query'; results = lastResult' :: q.results; lastResult = lastResult';}
+            else
+                runQuery {q with query = query'; idx = idx'; lastResult = lastResult';}
         
 
 let run (q: Query) =
