@@ -120,6 +120,7 @@ let ``Is single program Query done``() =
             args = 0;
             state = {
                     vertices = [];
+                    edges = [];
                     response =  Done; 
                     }
         }]; // TODO: Add vertex
@@ -136,6 +137,7 @@ let ``Is single program Query not done``() =
             args = 0;
             state = {
                     vertices = [];
+                    edges = [];
                     response =  Pull; 
                     }
         }]; // TODO: Add vertex
@@ -149,6 +151,7 @@ let ``Vertex pipeline one step``() =
     let query =  v 1 graph
     let queryState = {
         vertices = [];
+        edges = [];
         response =  Started; 
     }
     let queryState' = vertex graph 1 Started queryState
@@ -170,6 +173,7 @@ let ``Vertex pipeline two step``() =
     let query =  v 1 graph
     let queryState = {
         vertices = [];
+        edges = [];
         response =  Started; 
     }
     let queryState' = vertex graph 1 Started queryState
