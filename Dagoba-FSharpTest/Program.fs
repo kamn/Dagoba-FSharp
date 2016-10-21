@@ -195,10 +195,11 @@ let ``Basic run program``() =
 let ``Basic run with out program``() = 
     let results =
          emptyGraph 
-         |> addVertices [{name = "A"};]
+         |> addVertices [{name = "A"}; {name = "B"}; {name = "C"}]
+         |> addEdges [{label = "parent"; inId = 1; outId = 2; }; {label = "parent"; inId = 2; outId = 1; }]
          |> v 1
     let outResult =
         results
         |> out 1
         |> run
-    Assert.AreEqual("A", outResult.[0].name)
+    Assert.AreEqual("B", outResult.[0].name)

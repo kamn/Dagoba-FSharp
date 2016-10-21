@@ -121,10 +121,10 @@ let findVertexByIds (ids: int list) (graph: Graph) =
     List.map (fun value -> Map.find value graph.vertexMap) ids
 
 let findOutEdges (vertex: InternalVertex) (graph: Graph) =
-    Map.find vertex.id graph.outMap
+    Map.find vertex.id graph.inMap
 
 let findInEdges (vertex: InternalVertex) (graph: Graph) =
-    Map.find vertex.id graph.inMap
+    Map.find vertex.id graph.outMap
 // ---
 // Query functions
 // ---
@@ -173,7 +173,7 @@ let rec outEdgePipeline graph (args: obj) (gremlin: QueryStateResponse) (state: 
         {state with response = Pull}
     else
         //TODO Check that the initial query was made
-        if state.edges.Length = 0 then
+        if state.edges.Length = 0  && state.response = Pull then
             match gremlin with
             | Gremlin g ->
                 let edges = findOutEdges g.vertex graph
@@ -182,6 +182,8 @@ let rec outEdgePipeline graph (args: obj) (gremlin: QueryStateResponse) (state: 
                 else
                     outEdgePipeline graph args gremlin {state with edges = edges;}
             | _ -> {state with response = Pull}
+        elif state.edges.Length = 0 then
+            {state with response = Done}
         else
             match state.edges with
             | x::xs ->
@@ -205,6 +207,7 @@ let out (args:obj) (q: Query) =
 
 let isQueryDone (q: Query) =
     q.program
+
     |> List.map (fun p -> p.state.response)
     |> List.map (fun r ->
         match r with
@@ -219,21 +222,23 @@ let rec runQuery (q: QueryRunHelper) =
     else
         let graph = q.query.graph
         let step = List.item q.idx q.query.program
-        let stepState' = step.fn graph step.args q.lastResult step.state
-        let step' = {step with state = stepState'}
+        let stepStateN = step.fn graph step.args q.lastResult step.state
+        let stepN = {step with state = stepStateN}
         //TODO: If there is a reponse(Not pull) move the idx forward?
-        let lastResult' = stepState'.response;
-        let idx' = q.idx - 1;
-        let program' = replace step' q.idx q.query.program
-        let query' = {q.query with program = program'}
-        match lastResult' with
+        let lastResultN = stepStateN.response;
+        let idxN = q.idx - 1;
+        let programN = replace stepN q.idx q.query.program
+        let queryN = {q.query with program = programN}
+        match lastResultN with
         | Pull ->
-            runQuery {q with query = query';  idx = q.idx + 1;}
+            runQuery {q with query = queryN;  idx = q.idx + 1;}
+        | Done ->
+            q.results
         | _ ->
             if q.idx <= 0 then
-                runQuery {q with query = query'; results = lastResult' :: q.results; lastResult = lastResult';}
+                runQuery {q with query = queryN; results = lastResultN :: q.results; lastResult = lastResultN;}
             else
-                runQuery {q with query = query'; idx = idx'; lastResult = lastResult';}
+                runQuery {q with query = queryN; idx = idxN; lastResult = lastResultN;}
         
 
 let run (q: Query) =
