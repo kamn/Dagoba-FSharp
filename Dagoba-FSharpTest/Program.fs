@@ -203,3 +203,30 @@ let ``Basic run with out program``() =
         |> out 1
         |> run
     Assert.AreEqual("B", outResult.[0].name)
+
+[<Test>]
+let ``Run with out program and two edges``() = 
+    let results =
+         emptyGraph 
+         |> addVertices [{name = "A"}; {name = "B"}; {name = "C"}]
+         |> addEdges [{label = "parent"; inId = 1; outId = 2; }; {label = "parent"; inId = 1; outId = 3; }]
+         |> v 1
+    let outResult =
+        results
+        |> out 1
+        |> run
+    Assert.AreEqual("B", outResult.[0].name)
+    Assert.AreEqual("C", outResult.[1].name)
+
+[<Test>]
+let ``Basic run with inE program``() = 
+    let results =
+         emptyGraph 
+         |> addVertices [{name = "A"}; {name = "B"};]
+         |> addEdges [{label = "parent"; inId = 2; outId = 1 };]
+         |> v 1
+    let outResult =
+        results
+        |> inE 1
+        |> run
+    Assert.AreEqual("B", outResult.[0].name)

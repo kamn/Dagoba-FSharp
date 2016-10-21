@@ -168,11 +168,36 @@ let vertex graph (args: obj) gremlin (state: QueryState) =
                 {state with vertices = vertices'; response = Gremlin gremlin}
             | _ -> state
 
+let rec genericEdgePipeline getId (findEdge: InternalVertex -> Graph -> Edge list) graph (args: obj) (gremlin: QueryStateResponse) (state: QueryState) =
+    if state.response = Started then
+        {state with response = Pull}
+    else
+        if state.edges.Length = 0  && state.response = Pull then
+            match gremlin with
+            | Gremlin g ->
+                let edges = findEdge g.vertex graph
+                if edges.Length = 0 then
+                    {state with response = Pull} // 
+                else
+                    genericEdgePipeline getId findEdge graph args gremlin {state with edges = edges;}
+            | _ -> {state with response = Pull}
+        elif state.edges.Length = 0 then
+            {state with response = Done}
+        else
+            match state.edges with
+            | x::xs ->
+                let vertexId = getId x
+                let vertex = findVertexById vertexId graph
+                match gremlin with
+                | Gremlin g ->
+                    {state with edges = xs; response = Gremlin {g with vertex = vertex}}
+                | _ -> {state with response = Pull}
+            | _ ->  {state with response = Pull}
+
 let rec outEdgePipeline graph (args: obj) (gremlin: QueryStateResponse) (state: QueryState) =
     if state.response = Started then
         {state with response = Pull}
     else
-        //TODO Check that the initial query was made
         if state.edges.Length = 0  && state.response = Pull then
             match gremlin with
             | Gremlin g ->
@@ -203,7 +228,10 @@ let v (args:obj) (graph: Graph) =
     q |> add vertex args
 
 let out (args:obj) (q: Query) =
-    q |> add outEdgePipeline args
+    q |> add (genericEdgePipeline (fun v -> v.outId ) findOutEdges) args
+
+let inE (args:obj) (q: Query) =
+    q |> add (genericEdgePipeline (fun v -> v.inId ) findInEdges) args
 
 let isQueryDone (q: Query) =
     q.program
